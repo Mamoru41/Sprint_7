@@ -1,46 +1,36 @@
+import pytest
 import requests
 import allure
-import pytest
-from task import URL
+from data.urls import URLs
+from data.test_data import TestData
 
 
-class TestOrder:
+@allure.feature("Order API")
+class TestOrderCreation:
 
-    def generate_order_payload(self, colors):
-        return {
-            "firstName": "Naruto",
-            "lastName": "Uchiha",
-            "address": "Konoha, 142 apt.",
-            "metroStation": 4,
-            "phone": "+7 800 355 35 35",
-            "rentTime": 5,
-            "deliveryDate": "2020-06-06",
-            "comment": "Saske, come back to Konoha",
-            "color": colors
-        }
-
-    @allure.title("Проверка создания заказа")
-    @pytest.mark.parametrize("colors", [
-        (["BLACK"]),
-        (["GREY"]),
-        (["BLACK", "GREY"]),
-        ([])
+    @allure.title("Создание заказа с разными цветами")
+    @pytest.mark.parametrize("color", [
+        ["BLACK"],
+        ["GREY"],
+        ["BLACK", "GREY"],
+        []
     ])
-    def test_create_order(self, colors):
-        order = {
-            "firstName": "Naruto",
-            "lastName": "Uchiha",
-            "address": "Konoha, 142 apt.",
-            "metroStation": 4,
-            "phone": "+7 800 355 35 35",
-            "rentTime": 5,
-            "deliveryDate": "2020-06-06",
-            "comment": "Saske, come back to Konoha",
-            "color": colors
-        }
+    def test_create_order_with_different_colors(self, color):
+        # Подготавливаем данные для заказа
+        payload = TestData.ORDER_DATA.copy()
+        payload["color"] = color
 
-        with allure.step(f"Создание заказа с цветами: {colors}"):
-            response = requests.post(f'{URL}/orders', json=order)
-            assert response.status_code == 201, f"Ожидался статус 201, но получен {response.status_code}"
-            response_json = response.json()
-            assert "track" in response_json, f"Ожидалось 'track' в ответе, но получено {response_json}"
+        # Создаем заказ
+        response = requests.post(URLs.BASE_URL + URLs.ORDERS, json=payload)
+
+        assert response.status_code == 201
+        assert "track" in response.json()
+
+    @allure.title("Получение списка заказов")
+    def test_get_orders_list(self):
+        # Запрашиваем список всех заказов
+        response = requests.get(URLs.BASE_URL + URLs.ORDERS)
+
+        assert response.status_code == 200
+        assert "orders" in response.json()
+        assert isinstance(response.json()["orders"], list)
